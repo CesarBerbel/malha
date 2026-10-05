@@ -1,0 +1,15 @@
+{
+  "name": "Malha – Treino de Musculação",
+  "short_name": "Malha",
+  "description": "Monte sua série de treino por dia da semana e cronometre séries e descansos.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

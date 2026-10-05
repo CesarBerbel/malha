@@ -1,0 +1,243 @@
+:root {
+  --bg: #0f1115;
+  --surface: #1a1d24;
+  --surface-2: #242833;
+  --border: #2f3441;
+  --text: #eef0f4;
+  --muted: #9aa1b0;
+  --accent: #3ddc84;
+  --accent-ink: #062b15;
+  --rest: #4aa8ff;
+  --hydrate: #20c4d8;
+  --alert: #ff4d4f;
+  --danger: #ff6b6b;
+  --radius: 14px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.topbar {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 8px;
+  max-width: 720px; margin: 0 auto;
+}
+.topbar h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
+#topbar-sub { color: var(--accent); font-size: 13px; }
+
+main { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+h2 { margin: 8px 0; font-size: 20px; }
+h3 { margin: 18px 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+.muted { color: var(--muted); font-size: 14px; }
+.empty { color: var(--muted); text-align: center; padding: 16px 0; }
+
+/* ---------- controles ---------- */
+.btn {
+  appearance: none; border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  border-radius: 10px; padding: 10px 14px; font: inherit; font-weight: 600; cursor: pointer;
+  touch-action: manipulation;
+}
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.danger { color: var(--danger); }
+.btn.small { padding: 8px 10px; font-size: 14px; }
+.btn.big { width: 100%; padding: 16px; font-size: 18px; margin-top: 12px; }
+.btn.huge { width: 100%; padding: 22px; font-size: 22px; border-radius: 18px; }
+
+.icon-btn {
+  appearance: none; border: 0; background: transparent; color: var(--muted);
+  width: 34px; height: 34px; border-radius: 8px; font-size: 16px; cursor: pointer;
+}
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn.danger { color: var(--danger); }
+.icon-btn:disabled { opacity: .3; cursor: default; }
+
+input, select, textarea {
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-width: 0;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+textarea { width: 100%; margin: 8px 0; font-size: 13px; }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.field > span { font-size: 13px; color: var(--muted); }
+.field small { color: var(--muted); font-size: 12px; }
+.check { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.row.tight { margin: 0; gap: 0; flex-wrap: nowrap; }
+.grow { flex: 1 1 160px; }
+
+.chips { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.chip {
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  border-radius: 999px; padding: 8px 0; font: inherit; font-size: 14px; cursor: pointer;
+}
+.chip.active { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
+.chip sup { color: var(--accent); font-size: 9px; margin-left: 2px; }
+.chip.active sup { color: var(--accent-ink); }
+
+.plain-list { list-style: none; padding: 0; margin: 8px 0; }
+.plain-list > li { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
+.plain-list > li:last-child { border-bottom: 0; }
+ol.plain-list { counter-reset: n; }
+ol.plain-list > li::before { counter-increment: n; content: counter(n) "."; color: var(--muted); font-size: 12px; }
+
+.plan-item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.grid4 .field { margin: 4px 0 0; }
+.grid4 input { width: 100%; }
+
+/* ---------- biblioteca ---------- */
+.ex-list { list-style: none; padding: 0; margin: 0; }
+.ex-list li { display: flex; align-items: center; }
+.ex-row {
+  flex: 1; display: flex; justify-content: space-between; align-items: center;
+  background: transparent; border: 0; color: var(--text); font: inherit; text-align: left;
+  padding: 10px 4px; border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.ex-row .add { color: var(--accent); font-size: 20px; }
+.ex-row.added { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.ex-row.added .add { color: var(--danger); font-size: 24px; }
+.pick-banner {
+  position: sticky; top: 8px; z-index: 2; backdrop-filter: blur(8px); margin-bottom: 4px;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface)); border-radius: 10px; padding: 10px 12px;
+}
+.custom-form { margin-top: 16px; }
+.custom-form summary { cursor: pointer; color: var(--muted); }
+
+/* ---------- histórico ---------- */
+.hist { border-bottom: 1px solid var(--border); padding: 10px 0; }
+.hist summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.hist .plain-list li { flex-direction: row; justify-content: space-between; gap: 8px; }
+
+.done { text-align: center; }
+.big-stat { font-size: 44px; font-weight: 800; margin: 8px 0 0; }
+
+/* ---------- sessão de treino ---------- */
+.session { display: flex; flex-direction: column; gap: 14px; text-align: center; }
+.session-head .ex-name { font-size: 24px; margin: 4px 0; }
+.ex-meta { font-size: 17px; color: var(--muted); }
+.ex-meta b { color: var(--text); }
+.next-label { display: block; color: var(--hydrate); font-weight: 700; font-size: 13px; text-transform: uppercase; margin-top: 8px; }
+
+.dots { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+.dots i { width: 14px; height: 14px; border-radius: 50%; background: var(--surface-2); border: 2px solid var(--border); }
+.dots i.done { background: var(--accent); border-color: var(--accent); }
+.dots i.current { border-color: var(--accent); animation: pulse 1s ease-in-out infinite; }
+
+.timer-card {
+  background: var(--surface); border: 2px solid var(--border); border-radius: 22px; padding: 18px 12px;
+  transition: border-color .2s;
+}
+.phase-label { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+.timer { font-size: 84px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.05; }
+
+.phase-work .timer-card { border-color: var(--accent); }
+.phase-work .phase-label { color: var(--accent); }
+.phase-rest .timer-card { border-color: var(--rest); }
+.phase-rest .phase-label { color: var(--rest); }
+.phase-hydrate .timer-card { border-color: var(--hydrate); }
+.phase-hydrate .phase-label { color: var(--hydrate); }
+.phase-work .btn.huge { background: var(--rest); color: #04203d; }
+.phase-ready .timer { color: var(--muted); }
+
+.rest-track { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.rest-bar { height: 100%; width: 0; background: var(--rest); transition: width .25s linear; }
+.phase-hydrate .rest-bar { background: var(--hydrate); }
+
+/* Pisca quando o descanso passou do limite */
+.timer-card.alert { animation: blink 1s infinite; border-color: var(--alert); }
+.timer-card.alert .phase-label, .timer-card.alert .timer { color: var(--alert); }
+.timer-card.alert .rest-bar { background: var(--alert); }
+@keyframes blink {
+  0%, 49% { background: color-mix(in srgb, var(--alert) 35%, var(--surface)); }
+  50%, 100% { background: var(--surface); }
+}
+@keyframes pulse { 50% { transform: scale(1.3); } }
+
+.session-tools { justify-content: center; margin-top: 0; }
+
+/* ---------- navegação ---------- */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom);
+}
+.tabs button {
+  flex: 1; max-width: 140px; background: none; border: 0; color: var(--muted); font-size: 20px;
+  display: flex; flex-direction: column; align-items: center; padding: 8px 0 10px; cursor: pointer;
+}
+.tabs button span { font-size: 11px; margin-top: 2px; }
+.tabs button.active { color: var(--accent); }
+
+@media (max-width: 480px) {
+  .grid4 { grid-template-columns: repeat(2, 1fr); }
+  .timer { font-size: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-card.alert { animation-duration: 2s; }
+  .dots i.current { animation: none; }
+}
+
+/* ---------- MODO RELÓGIO ---------- */
+/* Telas pequenas/redondas: só o treino, botões enormes, conteúdo centralizado */
+body.watch { padding: 0; font-size: 14px; }
+body.watch .topbar, body.watch .tabs { display: none; }
+body.watch main { padding: 5% 11% 12%; }
+body.watch .card { background: none; border: 0; padding: 0; margin: 0; text-align: center; }
+body.watch h2 { font-size: 15px; }
+body.watch .plain-list > li { padding: 4px 0; font-size: 13px; }
+body.watch .field > span { display: none; }
+body.watch select { width: 100%; padding: 6px; font-size: 13px; }
+
+body.watch .session { gap: 6px; }
+body.watch .session-head > .muted, body.watch .dots { display: none; }
+body.watch .session-head .ex-name { font-size: 15px; margin: 2px 0; line-height: 1.2; }
+body.watch .ex-meta { font-size: 12px; }
+body.watch .next-label { font-size: 10px; margin-top: 2px; }
+body.watch .dots { gap: 5px; margin-top: 4px; }
+body.watch .dots i { width: 9px; height: 9px; border-width: 1px; }
+body.watch .timer-card { padding: 6px; border-radius: 16px; }
+body.watch .phase-label { font-size: 10px; }
+body.watch .timer { font-size: 40px; }
+body.watch .rest-track { height: 4px; margin-top: 4px; }
+body.watch .btn.huge, body.watch .btn.big { padding: 10px 8px; font-size: 15px; border-radius: 999px; margin-top: 4px; }
+body.watch .session-tools { gap: 4px; flex-wrap: nowrap; }
+body.watch .session-tools .btn.small { padding: 6px 6px; font-size: 11px; border-radius: 999px; }
+body.watch .session-tools [data-action^="sets-"] { display: none; }
+body.watch .big-stat { font-size: 30px; }
+
+/* ---------- carga durante o treino ---------- */
+.weight-ctl { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 10px; }
+.weight-ctl label { display: flex; align-items: baseline; gap: 4px; }
+.weight-ctl input {
+  width: 88px; text-align: center; font-size: 26px; font-weight: 800; padding: 6px 4px;
+  font-variant-numeric: tabular-nums;
+}
+.weight-ctl span { color: var(--muted); font-size: 15px; }
+.btn.round { width: 48px; height: 48px; padding: 0; border-radius: 50%; font-size: 26px; line-height: 1; }
+
+body.watch .weight-ctl { gap: 6px; margin-top: 4px; }
+body.watch .weight-ctl input { width: 56px; font-size: 16px; padding: 3px 2px; }
+body.watch .weight-ctl span { font-size: 11px; }
+body.watch .btn.round { width: 30px; height: 30px; font-size: 18px; }
