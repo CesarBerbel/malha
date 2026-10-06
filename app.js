@@ -123,9 +123,13 @@ async function pullWatchHistory() {
   const res = await fetch(`/api/sync/${s.code}/history`, { headers: { Authorization: `Bearer ${s.token}` } });
   if (!res.ok) return 0;
   const { entries = [] } = await res.json();
-  const known = new Set(state.history.map((h) => h.id).filter(Boolean));
-  const fresh = entries.filter((e) => e && e.id && !known.has(e.id) && Array.isArray(e.exercises));
+  // Ids já importados (inclusive os que o usuário apagou depois) nunca voltam
+  const imported = new Set(store.get('importedIds', []));
+  state.history.forEach((h) => h.id && imported.add(h.id));
+  const fresh = entries.filter((e) => e && e.id && !imported.has(e.id) && Array.isArray(e.exercises));
   if (!fresh.length) return 0;
+  fresh.forEach((e) => imported.add(e.id));
+  store.set('importedIds', [...imported].slice(-2000));
   state.history = [...state.history, ...fresh].sort((a, b) => new Date(b.date) - new Date(a.date));
   save.history();
   // A última carga usada no relógio passa a ser a carga do plano
