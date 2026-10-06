@@ -4,7 +4,7 @@ Um app web (PWA) que roda no navegador, pode ser instalado no celular como app e
 
 ## Funcionalidades
 
-- **Biblioteca** com cerca de 60 exercícios de musculação comuns, organizados por grupo muscular, mais exercícios personalizados.
+- **Biblioteca** com cerca de 60 exercícios de musculação comuns, organizados por grupo muscular, mais exercícios personalizados. Ela abre numa gaveta, com busca e filtro por grupo, ao montar o plano.
 - **Plano semanal**: monte o treino de cada dia (séries, repetições, carga e descanso por exercício), dê um nome, reordene e copie de outro dia.
 - **Cronômetro de treino**:
   - **▶ Play**: começa a série e o cronômetro conta o tempo de execução.
@@ -12,7 +12,9 @@ Um app web (PWA) que roda no navegador, pode ser instalado no celular como app e
   - Passado o limite (60 s por padrão, ajustável), o cronômetro **pisca**, vibra e apita para lembrar de voltar.
   - Ao terminar todas as séries de um exercício vem uma **pausa maior de hidratação** (180 s por padrão), mostrando qual é o próximo exercício.
   - Botões para adicionar ou remover série, pular exercício e encerrar o treino.
-- **Histórico** dos treinos feitos (duração, séries e cargas).
+- **Histórico** dos treinos feitos (duração, séries e cargas), com resumo dos últimos 7 dias.
+- **Barra flutuante**: ao sair da tela do treino em andamento, uma barra mostra o cronômetro e leva de volta a ele.
+- **Tema claro e escuro**, que segue o tema do aparelho.
 - **Ajustes**: tempos de descanso e hidratação, intervalo de repetição do alerta, vibração, som, tela sempre ligada e modo relógio.
 
 ## Como rodar

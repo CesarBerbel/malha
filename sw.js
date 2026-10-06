@@ -1,5 +1,5 @@
 // Cache do app para funcionar offline. Mude a versão ao publicar uma atualização.
-const CACHE = 'malha-v1';
+const CACHE = 'malha-v2';
 const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'exercises.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
