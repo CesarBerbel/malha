@@ -38,6 +38,40 @@ class AppState(context: Context) {
     val settings: Settings get() = plan?.settings ?: Settings()
     private var lastAlertAt = 0L
 
+    // ---------- batimentos ----------
+
+    val heart = HeartMonitor(context)
+
+    /** A Activity pede as permissões de batimentos e depois chama o callback. */
+    var requestHeartPermission: ((onDone: () -> Unit) -> Unit)? = null
+    private var unsavedSamples = 0
+
+    init {
+        heart.onSample = { bpm -> addHeartSample(bpm) }
+        if (session != null) scope.launch { heart.reattach() } // app reaberto no meio do treino
+    }
+
+    private fun addHeartSample(bpm: Int) {
+        val s = session ?: return
+        // Conta para o exercício a execução e o descanso dele; hidratação e "pronto" ficam de fora
+        if (s.phase != Phase.WORK && s.phase != Phase.REST) return
+        session = s.copy(hr = s.hr + (s.ex to (s.hr[s.ex] ?: HrAgg()).add(bpm)))
+        if (++unsavedSamples >= 15) { unsavedSamples = 0; saveSession() }
+    }
+
+    private fun heartTotals(s: Session): HrTotals? {
+        var avg = heart.avg
+        var max = heart.max
+        if (avg == 0) { // sem estatística do Health Services: usa as leituras recebidas
+            val count = s.hr.values.sumOf { it.count }
+            if (count > 0) {
+                avg = (s.hr.values.sumOf { it.sum } / count).toInt()
+                max = s.hr.values.maxOf { it.max }
+            }
+        }
+        return if (avg > 0 || heart.calories > 0) HrTotals(avg, max, heart.calories) else null
+    }
+
     fun today(): Int = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1 // 0 = domingo, como no app web
     fun dayPlan(day: Int): DayPlan = plan?.plans?.get(day) ?: DayPlan("", emptyList())
 
@@ -123,6 +157,12 @@ class AppState(context: Context) {
     }
 
     fun start(day: Int) {
+        val ask = requestHeartPermission
+        if (!heart.hasPermission() && ask != null) { ask { startSession(day) }; return }
+        startSession(day)
+    }
+
+    private fun startSession(day: Int) {
         val p = dayPlan(day)
         if (p.items.isEmpty()) return
         val now = System.currentTimeMillis()
@@ -130,6 +170,7 @@ class AppState(context: Context) {
         lastDone = null
         lastAlertAt = 0
         saveSession()
+        scope.launch { heart.start() }
     }
 
     /** Play (inicia/retoma a série) ou Pausa (fecha a série e começa o descanso do zero). */
@@ -184,21 +225,23 @@ class AppState(context: Context) {
         val now = System.currentTimeMillis()
         val s = if (s0.phase == Phase.WORK) s0.copy(log = s0.log + SetLog(s0.ex, s0.set, now - s0.t0, 0, s0.item.weight)) else s0
         if (s.log.isEmpty()) { discard(); return }
-        repo.addPending(s.historyEntry(now))
+        val totals = heartTotals(s)
+        repo.addPending(s.historyEntry(now, totals))
         pendingCount = repo.pending.length()
-        lastDone = s.summary(now)
+        lastDone = s.summary(now, totals)
         lastDoneSent = false
         session = null
         overlay = Overlay.NONE
         saveSession()
         buzz(longArrayOf(0, 200, 100, 200))
-        scope.launch { uploadPending() }
+        scope.launch { heart.stop(); uploadPending() }
     }
 
     fun discard() {
         session = null
         overlay = Overlay.NONE
         saveSession()
+        scope.launch { heart.stop() }
     }
 
     /** Chamado a cada ~200 ms durante o treino: vibra quando o descanso passa do limite. */

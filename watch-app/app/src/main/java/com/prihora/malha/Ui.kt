@@ -60,6 +60,7 @@ private val Ink = Color(0xFF0A0B0F)
 private val RestC = Color(0xFF5AA9FF)
 private val HydrateC = Color(0xFF2DD4E6)
 private val AlertC = Color(0xFFFF5A5F)
+private val HeartC = Color(0xFFFF4D6D)
 
 private val GROUP_COLORS = mapOf(
     "Peito" to 0xFFFF6B57, "Costas" to 0xFF4D9DFF, "Ombros" to 0xFFA78BFA, "Bíceps" to 0xFFFBBF24,
@@ -295,7 +296,7 @@ private fun SessionScreen(state: AppState) {
             if (progress > 0f) drawArc(color, -90f, 360f * progress, false, Offset(inset, inset), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
         }
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 22.dp),
+            Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -310,10 +311,11 @@ private fun SessionScreen(state: AppState) {
                 color = Muted, fontSize = 12.sp,
                 modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { state.overlay = Overlay.WEIGHT }.padding(horizontal = 6.dp, vertical = 2.dp),
             )
+            HeartLine(state.heart)
             Text(
                 fmtTime(elapsed),
                 color = if (over) (if (blinkOn) AlertC else AlertC.copy(alpha = 0.35f)) else if (s.phase == Phase.READY) Muted else TextC,
-                fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp,
+                fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1).sp,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 RoundButton(34.dp, Surface2, { state.skip() }) { Glyph(G.SKIP, TextC, 14.dp) }
@@ -392,6 +394,18 @@ private fun DoneScreen(state: AppState) {
         item { RoundButton(44.dp, Lime, {}) { Glyph(G.CHECK, Ink, 20.dp) } }
         item { Title("Treino concluído!") }
         item { Sub("${fmtDuration(d.durationMs)} · ${d.sets} séries" + (if (d.volumeKg > 0) " · ${d.volumeKg} kg" else "")) }
+        if (d.hrAvg > 0 || d.calories > 0) item {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Glyph(G.HEART, HeartC, 11.dp)
+                Text(
+                    listOfNotNull(
+                        if (d.hrAvg > 0) "média ${d.hrAvg} · máx ${d.hrMax} bpm" else null,
+                        if (d.calories > 0) "${d.calories} kcal" else null,
+                    ).joinToString(" · "),
+                    color = TextC, fontSize = 12.sp,
+                )
+            }
+        }
         item {
             Text(
                 if (state.lastDoneSent) "Enviado ao celular ✓" else "Será enviado quando houver internet",
@@ -440,7 +454,21 @@ private fun Pill(text: String, bg: Color, fg: Color, onClick: () -> Unit) {
     }
 }
 
-enum class G { PLAY, PAUSE, SKIP, STOP, X, PLUS, MINUS, CHECK, LEFT, RIGHT, BACKSPACE }
+/** Batimentos ao vivo; sem leitura mostra "--", e sem sensor/permissão mostra o motivo. */
+@Composable
+private fun HeartLine(heart: HeartMonitor) {
+    if (heart.status.isNotBlank()) {
+        Text(heart.status, color = Muted, fontSize = 9.sp, maxLines = 1)
+        return
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Glyph(G.HEART, HeartC, 11.dp)
+        Text(if (heart.bpm > 0) "${heart.bpm}" else "--", color = TextC, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+        Text("bpm", color = Muted, fontSize = 10.sp)
+    }
+}
+
+enum class G { PLAY, PAUSE, SKIP, STOP, X, PLUS, MINUS, CHECK, LEFT, RIGHT, BACKSPACE, HEART }
 
 /** Ícones desenhados à mão (sem depender de biblioteca de ícones). */
 @Composable
@@ -470,6 +498,17 @@ private fun Glyph(kind: G, color: Color, size: Dp) {
             G.CHECK -> stroke(Offset(w * 0.12f, h * 0.52f), Offset(w * 0.4f, h * 0.8f), Offset(w * 0.9f, h * 0.22f))
             G.LEFT -> stroke(Offset(w * 0.65f, h * 0.12f), Offset(w * 0.3f, h * 0.5f), Offset(w * 0.65f, h * 0.88f))
             G.RIGHT -> stroke(Offset(w * 0.35f, h * 0.12f), Offset(w * 0.7f, h * 0.5f), Offset(w * 0.35f, h * 0.88f))
+            G.HEART -> drawPath(
+                Path().apply {
+                    moveTo(w * 0.5f, h * 0.92f)
+                    cubicTo(w * 0.1f, h * 0.62f, w * -0.02f, h * 0.36f, w * 0.12f, h * 0.18f)
+                    cubicTo(w * 0.26f, h * 0.02f, w * 0.46f, h * 0.08f, w * 0.5f, h * 0.26f)
+                    cubicTo(w * 0.54f, h * 0.08f, w * 0.74f, h * 0.02f, w * 0.88f, h * 0.18f)
+                    cubicTo(w * 1.02f, h * 0.36f, w * 0.9f, h * 0.62f, w * 0.5f, h * 0.92f)
+                    close()
+                },
+                color,
+            )
             G.BACKSPACE -> {
                 drawPath(
                     Path().apply { moveTo(w * 0.3f, h * 0.2f); lineTo(w * 0.95f, h * 0.2f); lineTo(w * 0.95f, h * 0.8f); lineTo(w * 0.3f, h * 0.8f); lineTo(w * 0.04f, h * 0.5f); close() },

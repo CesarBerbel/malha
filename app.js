@@ -240,6 +240,7 @@ const ICONS = {
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
   watch: '<rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6V2h6v4M9 18v4h6v-4"/>',
+  heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
 };
 
 function icon(name, size = 22) {
@@ -919,9 +920,13 @@ function renderHistorico() {
           <span class="row-main"><b>${esc(x.name || `Treino de ${DAYS[x.day]}`)}</b><small class="with-ic">${cap(d.toLocaleDateString('pt-BR', { weekday: 'long' }))} · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${x.source === 'watch' ? ` · ${icon('watch', 13)} relógio` : ''}</small></span>
           <span class="row-meta"><b>${fmtDuration(x.durationMs)}</b><small>${plural(sets, 'série', 'séries')}</small></span>
         </summary>
+        ${x.heartRate || x.calories ? `<div class="hr-line">${icon('heart', 16)}<span>${[
+          x.heartRate ? `média <b>${x.heartRate.avg}</b> · máx <b>${x.heartRate.max}</b> bpm` : '',
+          x.calories ? `<b>${x.calories}</b> kcal` : '',
+        ].filter(Boolean).join(' · ')}</span></div>` : ''}
         <ul class="hlist">${x.exercises.map((e) => {
           const w = weightsLabel(e.weights || [e.weight]);
-          return `<li><span>${esc(e.name)}</span><small>${e.setsDone}/${e.setsPlanned} × ${esc(e.reps)}${w ? ` · ${esc(w)}` : ''}</small></li>`;
+          return `<li><span>${esc(e.name)}</span><small>${e.setsDone}/${e.setsPlanned} × ${esc(e.reps)}${w ? ` · ${esc(w)}` : ''}${e.hrAvg ? ` · ♥ ${e.hrAvg}` : ''}</small></li>`;
         }).join('')}</ul>
         <div class="hcard-foot">
           <button class="link-btn danger" data-action="del-hist" data-i="${idx}">${icon('trash', 16)} Apagar este treino</button>

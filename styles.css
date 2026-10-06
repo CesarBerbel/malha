@@ -590,3 +590,8 @@ body.watch .done > p { margin-bottom: 8px; }
 .center-text { text-align: center; }
 .with-ic { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .inline-form .grow { flex: 1 1 auto; }
+
+/* batimentos no histórico (treinos feitos no relógio) */
+.hr-line { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+.hr-line .ic { color: #FF4D6D; }
+.hr-line b { color: var(--text); }

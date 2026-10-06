@@ -73,6 +73,15 @@ enum class Phase { READY, WORK, REST, HYDRATE }
 
 data class SetLog(val ex: Int, val set: Int, val workMs: Long, val restMs: Long, val weight: String)
 
+/** Batimentos acumulados de um exercício (séries + descansos dele). */
+data class HrAgg(val sum: Long = 0, val count: Int = 0, val max: Int = 0) {
+    fun add(bpm: Int) = HrAgg(sum + bpm, count + 1, maxOf(max, bpm))
+    val avg: Int get() = if (count == 0) 0 else (sum / count).toInt()
+}
+
+/** Totais do treino vindos do Health Services. */
+data class HrTotals(val avg: Int, val max: Int, val calories: Double)
+
 data class Session(
     val day: Int,
     val name: String,
@@ -83,6 +92,7 @@ data class Session(
     val t0: Long,
     val start: Long,
     val log: List<SetLog> = emptyList(),
+    val hr: Map<Int, HrAgg> = emptyMap(), // índice do exercício → batimentos
 ) {
     val item: Item get() = items[ex]
     /** Nenhuma série feita nem em andamento: pode ser cancelado sem salvar. */
@@ -95,7 +105,10 @@ data class Session(
     }
 }
 
-data class Summary(val name: String, val durationMs: Long, val exercises: Int, val sets: Int, val volumeKg: Long)
+data class Summary(
+    val name: String, val durationMs: Long, val exercises: Int, val sets: Int, val volumeKg: Long,
+    val hrAvg: Int = 0, val hrMax: Int = 0, val calories: Int = 0,
+)
 
 private fun Item.toJson() = JSONObject()
     .put("exId", exId).put("name", name).put("group", group)
@@ -114,6 +127,7 @@ fun Session.toJson(): String = JSONObject()
     .put("log", JSONArray(log.map {
         JSONObject().put("ex", it.ex).put("set", it.set).put("workMs", it.workMs).put("restMs", it.restMs).put("weight", it.weight)
     }))
+    .put("hr", JSONObject().apply { hr.forEach { (ex, a) -> put(ex.toString(), JSONObject().put("sum", a.sum).put("count", a.count).put("max", a.max)) } })
     .toString()
 
 fun sessionFromJson(json: String): Session? = runCatching {
@@ -129,11 +143,17 @@ fun sessionFromJson(json: String): Session? = runCatching {
         day = o.getInt("day"), name = o.optString("name"), items = items,
         ex = o.getInt("ex"), set = o.getInt("set"), phase = Phase.valueOf(o.getString("phase")),
         t0 = o.getLong("t0"), start = o.getLong("start"), log = log,
+        hr = o.optJSONObject("hr")?.let { h ->
+            h.keys().asSequence().associate { k ->
+                val a = h.getJSONObject(k)
+                k.toInt() to HrAgg(a.getLong("sum"), a.getInt("count"), a.getInt("max"))
+            }
+        } ?: emptyMap(),
     )
 }.getOrNull()
 
 /** Treino concluído no mesmo formato do histórico do app web. */
-fun Session.historyEntry(now: Long): JSONObject {
+fun Session.historyEntry(now: Long, totals: HrTotals?): JSONObject {
     val exercises = JSONArray()
     items.forEachIndexed { i, it ->
         val sets = log.filter { l -> l.ex == i }
@@ -144,6 +164,7 @@ fun Session.historyEntry(now: Long): JSONObject {
                 .put("weights", JSONArray(sets.map { l -> l.weight }))
                 .put("setsDone", sets.size).put("setsPlanned", it.sets)
                 .put("workMs", sets.sumOf { l -> l.workMs })
+                .apply { hr[i]?.takeIf { a -> a.count > 0 }?.let { a -> put("hrAvg", a.avg).put("hrMax", a.max) } }
         )
     }
     return JSONObject()
@@ -154,12 +175,19 @@ fun Session.historyEntry(now: Long): JSONObject {
         .put("name", name)
         .put("durationMs", now - start)
         .put("exercises", exercises)
+        .apply {
+            if (totals != null && totals.avg > 0) put("heartRate", JSONObject().put("avg", totals.avg).put("max", totals.max))
+            if (totals != null && totals.calories > 0) put("calories", Math.round(totals.calories))
+        }
 }
 
-fun Session.summary(now: Long): Summary {
+fun Session.summary(now: Long, totals: HrTotals?): Summary {
     val done = log.groupBy { it.ex }
     val volume = log.sumOf { l -> (parseKg(l.weight) ?: 0.0) * (items[l.ex].reps.trim().toIntOrNull() ?: 0) }
-    return Summary(name, now - start, done.size, log.size, volume.roundToLong())
+    return Summary(
+        name, now - start, done.size, log.size, volume.roundToLong(),
+        hrAvg = totals?.avg ?: 0, hrMax = totals?.max ?: 0, calories = totals?.calories?.roundToLong()?.toInt() ?: 0,
+    )
 }
 
 // ---------- formatação ----------

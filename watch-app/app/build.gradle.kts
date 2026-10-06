@@ -33,4 +33,6 @@ dependencies {
     implementation("androidx.wear.compose:compose-material3:1.7.0")
     implementation("androidx.wear.compose:compose-foundation:1.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("androidx.health:health-services-client:1.1.0")
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.3.0")
 }
