@@ -102,13 +102,14 @@ fun MalhaApp(state: AppState, keepScreenOn: (Boolean) -> Unit) {
 
 @Composable
 private fun HomeScreen(state: AppState) {
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
     val day = state.viewDay
     val p = state.dayPlan(day)
     Box(Modifier.fillMaxSize()) {
         ScalingLazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
+            autoCentering = null, // lista começa no topo, não no meio da tela
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -182,10 +183,11 @@ private fun ExerciseRow(n: Int, it: Item) {
 @Composable
 private fun ConnectScreen(state: AppState) {
     var text by remember { mutableStateOf("") }
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
     ScalingLazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
+        autoCentering = null,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -336,10 +338,11 @@ private fun WeightScreen(state: AppState) {
 @Composable
 private fun StopScreen(state: AppState) {
     val s = state.session ?: return
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
     ScalingLazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
+        autoCentering = null,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -363,10 +366,11 @@ private fun StopScreen(state: AppState) {
 @Composable
 private fun DoneScreen(state: AppState) {
     val d = state.lastDone ?: return
-    val listState = rememberScalingLazyListState()
+    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
     ScalingLazyColumn(
         state = listState,
         modifier = Modifier.fillMaxSize(),
+        autoCentering = null,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
