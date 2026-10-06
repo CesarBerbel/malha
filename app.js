@@ -49,15 +49,112 @@ const state = {
   libFilter: { q: '', group: '' },
   dialog: null,                          // { message, detail, ok, danger, resolve }
   lastDone: null,
+  sync: store.get('sync', null),         // { code, token, pushedAt } – ligação com o app do relógio
 };
 
 const save = {
-  settings: () => store.set('settings', state.settings),
-  custom: () => store.set('custom', state.custom),
-  plans: () => store.set('plans', state.plans),
+  settings: () => { store.set('settings', state.settings); schedulePush(); },
+  custom: () => { store.set('custom', state.custom); schedulePush(); },
+  plans: () => { store.set('plans', state.plans); schedulePush(); },
   history: () => store.set('history', state.history),
   session: () => store.set('session', state.session),
+  sync: () => store.set('sync', state.sync),
 };
+
+// ---------- sincronização com o app do relógio ----------
+// O celular é a fonte do plano: envia a cada mudança. O relógio devolve os treinos feitos.
+const SYNC_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O e 1/I
+const canSync = () => !!state.sync && location.protocol !== 'file:';
+
+function randomCode(n = 6) {
+  const a = crypto.getRandomValues(new Uint32Array(n));
+  return [...a].map((x) => SYNC_ALPHABET[x % SYNC_ALPHABET.length]).join('');
+}
+function randomToken() {
+  return [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+function newId() {
+  return Date.now().toString(36) + randomToken().slice(0, 8);
+}
+
+function syncPayload() {
+  const exercises = {};
+  Object.values(state.plans).forEach((p) => p.items.forEach((it) => {
+    const e = exById(it.exId);
+    exercises[it.exId] = { name: e.name, group: e.group };
+  }));
+  const { restAlert, hydrateAlert, alertRepeat, weightStep, vibrate } = state.settings;
+  return { plans: state.plans, exercises, settings: { restAlert, hydrateAlert, alertRepeat, weightStep, vibrate } };
+}
+
+let pushTimer = 0;
+function schedulePush() {
+  if (!canSync()) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => pushSync().catch(() => {}), 1200);
+}
+
+async function pushSync(retries = 2) {
+  const s = state.sync;
+  const res = await fetch(`/api/sync/${s.code}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` },
+    body: JSON.stringify(syncPayload()),
+  });
+  if (res.status === 403 && !s.pushedAt && retries > 0) {
+    // Código recém-gerado já existia no servidor (raríssimo): sorteia outro
+    s.code = randomCode();
+    save.sync();
+    return pushSync(retries - 1);
+  }
+  if (!res.ok) throw new Error(`sync ${res.status}`);
+  s.pushedAt = new Date().toISOString();
+  save.sync();
+}
+
+async function pullWatchHistory() {
+  const s = state.sync;
+  const res = await fetch(`/api/sync/${s.code}/history`, { headers: { Authorization: `Bearer ${s.token}` } });
+  if (!res.ok) return 0;
+  const { entries = [] } = await res.json();
+  const known = new Set(state.history.map((h) => h.id).filter(Boolean));
+  const fresh = entries.filter((e) => e && e.id && !known.has(e.id) && Array.isArray(e.exercises));
+  if (!fresh.length) return 0;
+  state.history = [...state.history, ...fresh].sort((a, b) => new Date(b.date) - new Date(a.date));
+  save.history();
+  // A última carga usada no relógio passa a ser a carga do plano
+  fresh.sort((a, b) => new Date(a.date) - new Date(b.date)).forEach((e) => {
+    const plan = state.plans[e.day];
+    if (!plan) return;
+    e.exercises.forEach((x) => {
+      const item = plan.items.find((it) => it.exId === x.exId);
+      const last = (x.weights || []).filter((w) => w !== '' && w != null).pop();
+      if (item && last != null) item.weight = String(last);
+    });
+  });
+  save.plans();
+  return fresh.length;
+}
+
+async function syncNow({ quiet = false } = {}) {
+  if (!canSync()) return;
+  try {
+    await pushSync();
+    const n = await pullWatchHistory();
+    if (n) toast(plural(n, 'treino do relógio importado', 'treinos do relógio importados'));
+    else if (!quiet) toast('Sincronizado com o relógio');
+    if (n || (!quiet && state.tab === 'ajustes')) render();
+  } catch {
+    if (!quiet) toast('Sem conexão com o servidor');
+  }
+}
+
+async function enableSync() {
+  state.sync = { code: randomCode(), token: randomToken(), pushedAt: null };
+  save.sync();
+  render();
+  await syncNow();
+}
 
 // ---------- utilidades ----------
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -329,6 +426,8 @@ function finishSession() {
   const now = Date.now();
   if (s.phase === 'work') s.log.push({ ex: s.ex, set: s.set, workMs: now - s.t0, restMs: 0, weight: s.items[s.ex].weight });
   const entry = {
+    id: newId(),
+    source: 'phone',
     date: new Date(s.start).toISOString(),
     day: s.day,
     name: s.name,
@@ -336,7 +435,7 @@ function finishSession() {
     exercises: s.items.map((it, i) => {
       const sets = s.log.filter((l) => l.ex === i);
       return {
-        name: it.name, reps: it.reps, weight: it.weight,
+        exId: it.exId, name: it.name, reps: it.reps, weight: it.weight,
         weights: sets.map((l) => l.weight ?? it.weight), // carga de cada série
         setsDone: sets.length, setsPlanned: it.sets,
         workMs: sets.reduce((a, l) => a + l.workMs, 0),
@@ -807,7 +906,7 @@ function renderHistorico() {
       <details class="hcard">
         <summary>
           <span class="date-block"><b>${d.getDate()}</b><small>${d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</small></span>
-          <span class="row-main"><b>${esc(x.name || `Treino de ${DAYS[x.day]}`)}</b><small>${cap(d.toLocaleDateString('pt-BR', { weekday: 'long' }))} · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</small></span>
+          <span class="row-main"><b>${esc(x.name || `Treino de ${DAYS[x.day]}`)}</b><small class="with-ic">${cap(d.toLocaleDateString('pt-BR', { weekday: 'long' }))} · ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${x.source === 'watch' ? ` · ${icon('watch', 13)} relógio` : ''}</small></span>
           <span class="row-meta"><b>${fmtDuration(x.durationMs)}</b><small>${plural(sets, 'série', 'séries')}</small></span>
         </summary>
         <ul class="hlist">${x.exercises.map((e) => {
@@ -857,6 +956,26 @@ function renderAjustes() {
       ${switchRow('vibrate', 'Vibrar')}
       ${switchRow('sound', 'Tocar som')}
       ${switchRow('keepAwake', 'Manter a tela ligada', 'Durante o treino')}
+    </section>
+
+    <h3 class="group-title">App do relógio</h3>
+    <section class="group">
+      ${state.sync ? `
+      <div class="set-row column">
+        <div class="set-text"><b>Código do relógio</b><small>No app Malha do relógio, toque em “Conectar” e digite este código</small></div>
+        <div class="sync-code" aria-label="Código ${state.sync.code.split('').join(' ')}">${esc(state.sync.code.slice(0, 3))}<span></span>${esc(state.sync.code.slice(3))}</div>
+        <small class="muted center-text">${state.sync.pushedAt
+          ? `Plano enviado às ${new Date(state.sync.pushedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} de ${new Date(state.sync.pushedAt).toLocaleDateString('pt-BR')}`
+          : 'Ainda não enviado'}</small>
+        <div class="inline-form">
+          <button class="btn btn-soft grow" data-action="sync-now">${icon('link', 18)} Sincronizar agora</button>
+          <button class="btn btn-soft" data-action="sync-off">${icon('x', 18)} Desconectar</button>
+        </div>
+      </div>` : `
+      <div class="set-row column">
+        <div class="set-text"><b>Conectar o app do Galaxy Watch</b><small>Gera um código curto para digitar no relógio. O plano vai sozinho a cada mudança, e os treinos feitos no relógio voltam para o histórico.</small></div>
+        <button class="btn btn-primary" data-action="sync-enable">${icon('watch', 18)} Gerar código</button>
+      </div>`}
     </section>
 
     <h3 class="group-title">Modo relógio</h3>
@@ -1118,6 +1237,13 @@ document.addEventListener('click', async (ev) => {
       break;
     }
     case 'set-watch': state.settings.watchMode = el.dataset.value; save.settings(); render(); break;
+    case 'sync-enable': enableSync(); break;
+    case 'sync-now': syncNow(); break;
+    case 'sync-off':
+      if (await ask('Desconectar o relógio?', { detail: 'O relógio deixa de receber o plano. Para conectar de novo, um código novo será gerado.', ok: 'Desconectar', danger: true })) {
+        state.sync = null; save.sync(); render();
+      }
+      break;
     case 'exit-watch': {
       // "Desligado" vence o automático; também tira o ?watch do endereço, que força o modo
       state.settings.watchMode = 'off';
@@ -1215,6 +1341,10 @@ window.addEventListener('resize', () => {
 render();
 checkImportLink();
 updateWakeLock();
+syncNow({ quiet: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncNow({ quiet: true });
+});
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});

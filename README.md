@@ -31,7 +31,26 @@ Para usar no celular e no relógio, publique a pasta num host com HTTPS (GitHub 
 
 ### Deploy com Coolify
 
-O projeto tem `Dockerfile` e `nginx.conf` (Nginx servindo os arquivos na porta 80, com rota de saúde em `/healthz`). No Coolify: crie um recurso a partir do repositório Git, escolha o build pack **Dockerfile**, porta **80** e um domínio com `https://`. Cada `git push` gera um novo deploy.
+O `Dockerfile` roda o `server.js` (Node, sem dependências) na porta 80. Ele entrega o app web e a API de sincronização com o relógio, e tem uma rota de saúde em `/healthz`. No Coolify: build pack **Dockerfile**, porta **80**, domínio com `https://` e um **volume persistente em `/data`** (onde ficam os planos sincronizados).
+
+### API de sincronização
+
+| Método | Caminho | Quem usa |
+|---|---|---|
+| `PUT` | `/api/sync/CÓDIGO` | celular envia o plano (chave secreta no cabeçalho `Authorization`) |
+| `GET` | `/api/sync/CÓDIGO` | relógio baixa o plano |
+| `POST` | `/api/sync/CÓDIGO/history` | relógio envia treinos concluídos |
+| `GET` | `/api/sync/CÓDIGO/history` | celular busca os treinos do relógio (com a chave) |
+
+## App nativo do relógio (Wear OS)
+
+Em `watch-app/`: Kotlin + Compose for Wear OS. Mostra o treino do dia, cronômetro em anel, vibração nos alertas e tela ligada durante o treino. O plano vem do celular pelo código de 6 letras (Ajustes → App do relógio).
+
+```bash
+cd watch-app
+./gradlew assembleDebug          # gera app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
 
 ## Celular
 

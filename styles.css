@@ -578,3 +578,15 @@ body.watch .done .stat-grid div { padding: 6px; }
 body.watch .done .stat-grid b { font-size: 14px; }
 body.watch .done .btn-cta { margin-top: 8px; padding: 10px; font-size: 14px; }
 body.watch .done > p { margin-bottom: 8px; }
+
+/* ================= SINCRONIZAÇÃO COM O RELÓGIO ================= */
+.sync-code {
+  display: flex; justify-content: center; align-items: center; gap: 14px; padding: 16px 8px;
+  border-radius: var(--radius-md); background: var(--surface-2);
+  font-size: 38px; font-weight: 800; letter-spacing: .18em; font-variant-numeric: tabular-nums;
+  color: var(--accent-text); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.sync-code span { width: 2px; height: 30px; background: var(--line); }
+.center-text { text-align: center; }
+.with-ic { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.inline-form .grow { flex: 1 1 auto; }

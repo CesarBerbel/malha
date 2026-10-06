@@ -1,5 +1,5 @@
 // Cache do app para funcionar offline. Mude a versão ao publicar uma atualização.
-const CACHE = 'malha-v2';
+const CACHE = 'malha-v3';
 const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'exercises.js', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', (e) => {
@@ -17,6 +17,8 @@ self.addEventListener('activate', (e) => {
 // Rede primeiro (pega atualizações), cache como reserva quando estiver offline.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  // A API de sincronização nunca passa pelo cache
+  if (new URL(e.request.url).pathname.startsWith('/api/')) return;
   e.respondWith(
     fetch(e.request)
       .then((res) => {
