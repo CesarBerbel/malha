@@ -13,7 +13,23 @@ const DATA_DIR = process.env.DATA_DIR || '/data';
 const DATA_FILE = path.join(DATA_DIR, 'sync.json');
 const MAX_BODY = 512 * 1024;
 const MAX_HISTORY = 500;
-const CODE_RE = /^[A-HJ-NP-Z2-9]{6}$/; // sem 0/O e 1/I, fáceis de confundir no relógio
+const CODE_RE = /^[0-9]{6}$/; // só números: fácil de digitar no teclado numérico do relógio
+
+// Limita quem tenta adivinhar códigos: no máximo 30 códigos inexistentes por IP a cada 10 min
+const misses = new Map();
+function tooManyMisses(ip) {
+  const now = Date.now();
+  const m = misses.get(ip);
+  if (!m || now - m.since > 600000) return false;
+  return m.count >= 30;
+}
+function countMiss(ip) {
+  const now = Date.now();
+  const m = misses.get(ip);
+  if (!m || now - m.since > 600000) misses.set(ip, { since: now, count: 1 });
+  else m.count++;
+  if (misses.size > 10000) misses.clear();
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -88,14 +104,17 @@ function readJson(req) {
 // ---------- API ----------
 async function api(req, res, parts) {
   // parts: ['api', 'sync', CODE, ('history')?]
-  const code = (parts[2] || '').toUpperCase();
+  const code = parts[2] || '';
   if (parts[1] !== 'sync' || !CODE_RE.test(code)) return send(res, 404, { error: 'não encontrado' });
+  // O proxy do Coolify acrescenta o IP real no fim da lista; o início pode ser forjado pelo cliente
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',').pop().trim();
+  if (tooManyMisses(ip)) return send(res, 429, { error: 'muitas tentativas, aguarde alguns minutos' });
   const rec = db[code];
   const sub = parts[3];
 
   if (!sub) {
     if (req.method === 'GET') {
-      if (!rec || !rec.payload) return send(res, 404, { error: 'código não encontrado' });
+      if (!rec || !rec.payload) { countMiss(ip); return send(res, 404, { error: 'código não encontrado' }); }
       return send(res, 200, { ...rec.payload, updatedAt: rec.updatedAt });
     }
     if (req.method === 'PUT') {

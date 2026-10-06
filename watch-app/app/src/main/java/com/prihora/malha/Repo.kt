@@ -9,7 +9,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 const val BASE_URL = "https://prihora.com"
-const val CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // igual ao servidor: sem 0/O e 1/I
+const val CODE_DIGITS = 6 // o código do celular tem 6 números
 
 class HttpError(val status: Int, message: String) : Exception(message)
 

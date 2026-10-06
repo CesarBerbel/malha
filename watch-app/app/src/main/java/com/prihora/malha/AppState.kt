@@ -44,8 +44,9 @@ class AppState(context: Context) {
     // ---------- sincronização ----------
 
     fun connect(newCode: String) {
-        val c = newCode.uppercase().filter { it in CODE_ALPHABET }
-        if (c.length != 6) { status = "O código tem 6 letras"; return }
+        val c = newCode.filter { it.isDigit() }
+        if (c.length != CODE_DIGITS) { status = "O código tem 6 números"; return }
+        if (busy) return
         scope.launch {
             busy = true
             status = "Conectando…"
@@ -61,7 +62,11 @@ class AppState(context: Context) {
                 buzz(longArrayOf(0, 60, 80, 60))
                 uploadPending()
             } catch (e: HttpError) {
-                status = if (e.status == 404) "Código não encontrado" else "Erro do servidor (${e.status})"
+                status = when (e.status) {
+                    404 -> "Código não encontrado"
+                    429 -> "Muitas tentativas. Aguarde."
+                    else -> "Erro do servidor (${e.status})"
+                }
             } catch (e: Exception) {
                 status = "Sem internet"
             } finally {

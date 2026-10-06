@@ -18,9 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,14 +33,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -179,59 +171,81 @@ private fun ExerciseRow(n: Int, it: Item) {
 }
 
 // ---------- conectar com o código do celular ----------
+// Teclado numérico próprio: o teclado do sistema no relógio se perde com campos que filtram o texto.
 
 @Composable
 private fun ConnectScreen(state: AppState) {
-    var text by remember { mutableStateOf("") }
-    val listState = rememberScalingLazyListState(initialCenterItemIndex = 0)
-    ScalingLazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        autoCentering = null,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        item { Spacer(Modifier.height(16.dp)) }
-        item { Title("Conectar") }
-        item { Sub("No celular: Ajustes → App do relógio → Gerar código") }
-        item {
-            BasicTextField(
-                value = text,
-                onValueChange = { v -> text = v.uppercase().filter { it in CODE_ALPHABET }.take(6) },
-                singleLine = true,
-                textStyle = TextStyle(color = Lime, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center, letterSpacing = 3.sp),
-                cursorBrush = SolidColor(Lime),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Characters,
-                    autoCorrectEnabled = false,
-                    keyboardType = KeyboardType.Ascii,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { state.connect(text) }),
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Surface)
-                    .border(1.dp, Surface2, RoundedCornerShape(14.dp))
-                    .padding(vertical = 10.dp),
-                decorationBox = { inner ->
-                    Box(contentAlignment = Alignment.Center) {
-                        if (text.isEmpty()) Text("toque e digite", color = Muted, fontSize = 13.sp)
-                        inner()
-                    }
-                },
-            )
-        }
-        item {
-            Pill(if (state.busy) "Conectando…" else "Conectar", if (text.length == 6) Lime else Surface2, if (text.length == 6) Ink else Muted) {
-                state.connect(text)
+    var digits by remember { mutableStateOf("") }
+    val canGoBack = state.code != null || state.plan != null
+
+    fun press(key: String) {
+        when (key) {
+            "DEL" -> { digits = digits.dropLast(1); state.status = "" }
+            "OK" -> state.connect(digits)
+            else -> if (digits.length < CODE_DIGITS) {
+                digits += key
+                if (digits.length == CODE_DIGITS) state.connect(digits) // conecta sozinho no 6º número
             }
         }
-        if (state.status.isNotBlank()) item { Text(state.status, color = Muted, fontSize = 12.sp, textAlign = TextAlign.Center) }
-        if (state.code != null || state.plan != null) {
-            item { Pill("Voltar", Surface2, TextC) { state.overlay = Overlay.NONE; state.status = "" } }
+    }
+
+    Column(
+        Modifier.fillMaxSize().padding(top = 16.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            when {
+                state.busy -> "Conectando…"
+                state.status.isNotBlank() -> state.status
+                else -> "Código do celular"
+            },
+            color = if (state.status.isNotBlank() && !state.busy) AlertC.copy(alpha = 0.9f) else Muted,
+            fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)) {
+            repeat(CODE_DIGITS) { i ->
+                Box(
+                    Modifier
+                        .size(width = 19.dp, height = 25.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Surface)
+                        .border(1.dp, if (i == digits.length) Lime.copy(alpha = 0.6f) else Surface2, RoundedCornerShape(6.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(digits.getOrNull(i)?.toString() ?: "", color = Lime, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+                }
+                if (i == 2) Spacer(Modifier.width(4.dp))
+            }
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("DEL", "0", "OK")).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.padding(vertical = 2.dp)) {
+                row.forEach { key ->
+                    val ready = key == "OK" && digits.length == CODE_DIGITS
+                    Box(
+                        Modifier
+                            .size(width = 48.dp, height = 30.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (ready) Lime else if (key.length > 1) Surface2 else Surface)
+                            .clickable { press(key) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        when (key) {
+                            "DEL" -> Glyph(G.BACKSPACE, TextC, 18.dp)
+                            "OK" -> Glyph(G.CHECK, if (ready) Ink else Muted, 15.dp)
+                            else -> Text(key, color = TextC, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+        if (canGoBack) {
+            Text(
+                "Voltar", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 2.dp).clip(RoundedCornerShape(8.dp))
+                    .clickable { state.overlay = Overlay.NONE; state.status = "" }.padding(horizontal = 10.dp, vertical = 3.dp),
+            )
+        }
     }
 }
 
@@ -426,7 +440,7 @@ private fun Pill(text: String, bg: Color, fg: Color, onClick: () -> Unit) {
     }
 }
 
-enum class G { PLAY, PAUSE, SKIP, STOP, X, PLUS, MINUS, CHECK, LEFT, RIGHT }
+enum class G { PLAY, PAUSE, SKIP, STOP, X, PLUS, MINUS, CHECK, LEFT, RIGHT, BACKSPACE }
 
 /** Ícones desenhados à mão (sem depender de biblioteca de ícones). */
 @Composable
@@ -456,6 +470,14 @@ private fun Glyph(kind: G, color: Color, size: Dp) {
             G.CHECK -> stroke(Offset(w * 0.12f, h * 0.52f), Offset(w * 0.4f, h * 0.8f), Offset(w * 0.9f, h * 0.22f))
             G.LEFT -> stroke(Offset(w * 0.65f, h * 0.12f), Offset(w * 0.3f, h * 0.5f), Offset(w * 0.65f, h * 0.88f))
             G.RIGHT -> stroke(Offset(w * 0.35f, h * 0.12f), Offset(w * 0.7f, h * 0.5f), Offset(w * 0.35f, h * 0.88f))
+            G.BACKSPACE -> {
+                drawPath(
+                    Path().apply { moveTo(w * 0.3f, h * 0.2f); lineTo(w * 0.95f, h * 0.2f); lineTo(w * 0.95f, h * 0.8f); lineTo(w * 0.3f, h * 0.8f); lineTo(w * 0.04f, h * 0.5f); close() },
+                    color, style = Stroke(w * 0.09f, join = androidx.compose.ui.graphics.StrokeJoin.Round),
+                )
+                drawLine(color, Offset(w * 0.5f, h * 0.36f), Offset(w * 0.76f, h * 0.64f), w * 0.09f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.76f, h * 0.36f), Offset(w * 0.5f, h * 0.64f), w * 0.09f, StrokeCap.Round)
+            }
         }
     }
 }

@@ -63,7 +63,7 @@ const save = {
 
 // ---------- sincronização com o app do relógio ----------
 // O celular é a fonte do plano: envia a cada mudança. O relógio devolve os treinos feitos.
-const SYNC_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem 0/O e 1/I
+const SYNC_ALPHABET = '0123456789'; // só números: o relógio tem teclado numérico próprio
 const canSync = () => !!state.sync && location.protocol !== 'file:';
 
 function randomCode(n = 6) {
@@ -85,6 +85,12 @@ function syncPayload() {
   }));
   const { restAlert, hydrateAlert, alertRepeat, weightStep, vibrate } = state.settings;
   return { plans: state.plans, exercises, settings: { restAlert, hydrateAlert, alertRepeat, weightStep, vibrate } };
+}
+
+// Códigos antigos com letras viram números (mantém a chave secreta)
+if (state.sync && !/^\d{6}$/.test(state.sync.code)) {
+  state.sync = { ...state.sync, code: randomCode(), pushedAt: null };
+  store.set('sync', state.sync);
 }
 
 let pushTimer = 0;
